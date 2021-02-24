@@ -1,0 +1,29 @@
+body {
+  text-align: center;
+  font-family: sans-serif;
+}
+canvas {
+  background-color: black;
+}
+
+h3 {
+  color: purple;
+}
+h4 {
+  color: pink;
+}
+
+.footer {
+  position: fixed;     
+  text-align: center;    
+  bottom: 64px; 
+  width: 100%;
+}
+
+.bf {
+  color: #00ff00;
+}
+
+.visited {
+  color: #cbaf87;
+}

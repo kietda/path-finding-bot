@@ -1,0 +1,773 @@
+<!DOCTYPE html>    <!-- this is a HTML comment -->    <!--  -->
+<html lang="">    <!-- HTML page begs/ends w 'html' tag -->
+  <head>    <!-- HTML page has 'head'section and 'body' section -->
+    <meta foo="Time-stamp: <2020-09-20 22:42:25 Chuck Siska>">
+    <!-- ================================================ Mods ====
+     o- 2020-02-09 22:18:17: add btn onclick exported fn
+     o- 2020-02-10 17:22:23: log btn onclick
+     o- 2020-09-20 22:41:05; Add maze & supt drawing fns
+    .-->
+    <!--
+        Some code, mod'd, from "Introducing JavaScript Game Development" by Stuart.
+      -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jathp-P5-JS-HTML</title>     <!-- Browser or tab title -->
+    <link rel="stylesheet" href="assets/styles.css">    <!-- Tiny CSS style file -->
+    <style> body {padding: 0; margin: 0;} </style>    <!-- Bit of in-line CSS -->
+    <script src="p5.js"></script>    <!-- Load P5.JS, one file -->
+    <!-- For more P5.JS, CF https://github.com/processing/p5.js/wiki -->
+    <script src="cs-sketch-paint.js"></script>    <!-- Load my setup+draw P5-req'd fcns -->
+
+    <script type="text/javascript" src="Jathp.js"></script>    <!-- Load Jathp -->
+	  <h3>PROJECT 1 A* SEARCH</h3>
+	  <h4>By SUPER_CUTE Group</h4>
+  </head>
+  <body>
+	<div class="footer">
+		<h4 class="bf">GREEN: BEST PATH -<span class="visited">- BEIGE: CELLS VISITED</span> </h4>		
+	</div>
+  </body>    <!-- HTML display page ends here -->
+
+<script src="assets/draw-stuff.js"></script> <!-- Load some JS fcns in a file -->
+
+<!-- ==================================================================== -->
+
+<script type="text/lisp"> ;File: prelude.lsp
+; This file contains aliases and common definitions.
+; It also imports the javascript Math functions.
+
+(def + plus)
+(def define def)
+(def #t 't)
+(def #f Nil)
+(def nil Nil)
+(def - minus)
+(def / divide)
+(def % rem)
+(def * times)
+(def = equal)
+(def eq? equal)
+(def head car)
+(def first car)
+(def tail cdr)
+(def rest cdr)
+(def eq equal)
+(defun null (x) (equal x Nil))
+(defun zerop (x) (equal x 0))
+(defun plusp (x) (> x 0))
+(defun minusp (x) (< x 0))
+(defun evenp (x) (equal (rem x 2) 0))
+(defun oddp (x) (/= (rem x 2) 1))
+
+;; CS: pprint the Javathcript prelude fragment.
+(defun member (E L) ;; CS: orig name was "list-member", non-std.
+  (cond
+   ((null L) Nil) ;; Not found in list L.
+   ((equal E (first L)) L) ;; Found E, return L's remainder CS:Orig retval = 't.
+   ('t (member E (rest L)))))  ;; Not in head, check tail.
+
+(defun map (F L) ;;convert L=(e1 e2 ... eN) to ((F e1) (F e2) ... (F eN))
+  (if (null L)
+      Nil
+    (cons (F (head L))
+          (map F (tail L)))))
+
+
+; CADDRs
+
+(defun caar (x) (car (car x)))                    
+(defun cadr (x) (car (cdr x)))                    
+(defun cdar (x) (cdr (car x)))                   
+(defun cddr (x) (cdr (cdr x)))                    
+(defun caaar (x) (car (car (car x))))              
+(defun caadr (x) (car (car (cdr x))))             
+(defun cadar (x) (car (cdr (car x))))              
+(defun caddr (x) (car (cdr (cdr x))))              
+(defun cdaar (x) (cdr (car (car x))))              
+(defun cdadr (x) (cdr (car (cdr x))))              
+(defun cddar (x) (cdr (cdr (car x))))              
+(defun cdddr (x) (cdr (cdr (cdr x))))              
+(defun caaaar (x) (car (car (car (car x)))))        
+(defun caaadr (x) (car (car (car (cdr x)))))        
+(defun caadar (x) (car (car (cdr (car x)))))        
+(defun caaddr (x) (car (car (cdr (cdr x)))))        
+(defun cadaar (x) (car (cdr (car (car x)))))        
+(defun cadadr (x) (car (cdr (car (cdr x)))))        
+(defun caddar (x) (car (cdr (cdr (car x)))))        
+(defun cadddr (x) (car (cdr (cdr (cdr x)))))        
+(defun cdaaar (x) (cdr (car (car (car x)))))        
+(defun cdaadr (x) (cdr (car (car (cdr x)))))        
+(defun cdadar (x) (cdr (car (cdr (car x)))))        
+(defun cdaddr (x) (cdr (car (cdr (cdr x)))))        
+(defun cddaar (x) (cdr (cdr (car (car x)))))        
+(defun cddadr (x) (cdr (cdr (car (cdr x)))))        
+(defun cdddar (x) (cdr (cdr (cdr (car x)))))        
+(defun cddddr (x) (cdr (cdr (cdr (cdr x)))))        
+
+; Some stuff specific to being run in a browser.
+
+(def document (js "document"))
+(def body (js "document.body"))
+(def window (js "window"))
+(def getElement (method document "getElementById"))
+(def alert (method window "alert"))
+(def message alert)
+(def confirm (method window "confirm"))
+(def console (js "console"))
+
+; To be more like emacs, you might want to uncomment these two lines
+; (def setp set)
+; (def set def)
+
+; Import PI and the javascript math functions.
+;; CS: pprint the Javathcript prelude fragment.
+
+(let* ((math (js "Math"))
+       (import-math
+        (lambda (funcname) 
+          (def-dyn funcname (method math funcname)))))
+  (map import-math
+       '(sin cos tan asin acos atan atan2
+         abs floor ceil round trunc
+         max min
+         pow exp sqrt log log2 log10
+         hypot
+         random)))
+
+;; Jathp extras via defines; put here to be in correct scope.
+(def expt pow)
+(def != /=)
+
+(defun append (x y)
+  (cond ((null x) y)
+        ('t (cons (car x) (append (cdr x) y)))))
+
+</script>
+
+
+<!-- ==================================================================== -->
+<script type="text/lisp">
+(defun msg (rlist) ;; Create webpage popup alert/msg.
+  (list
+    (message (concat "msg: " rlist ))))
+</script>
+
+
+<!-- ==================================================== stgr ==== -->
+<script type="text/lisp">
+;; CS: print fcn for Jathp (to console)
+;; Must create a print-string for the value.
+;; [CS: Crash sensitivity to dbl-quoted open, "("; needs leading space.]
+(defun stgr (rx)
+  (cond
+   ((numberp rx) (concat "" rx))
+   ((null rx) "nil")
+   ((stringp rx) rx)
+   ((atom rx) (concat "" rx))
+   ((functionp rx) (fcn-guts rx))
+;   ((functionp rx) "[function]")
+   ((consp rx)
+    (let* ((open (substring " (" 1 2)) ;; use space before '(': Crash sensitive.
+           (rxlen (length rx))
+           (retv (concat open (stgr (car rx))))) ;; Recur on lkid/car.
+      (setq rx (cdr rx))
+      (while rx
+        (setq retv (concat retv " " (stgr (car rx)))) ;; Recur on lkid/car.
+        (setq rx (cdr rx)))
+      (concat retv ")")))
+   (t "[Unknown object]")))
+
+</script>
+
+<!-- =========================================== btn onclick =========== -->
+
+<!-- =========================================== End of page =========== -->
+
+<!-- ====================================================  ==== -->
+<script type="text/lisp">
+</script>
+
+<!-- ========================================================= logr ==== -->
+<script type="text/lisp">
+
+(defun logr (rx) ;; Shorter way to 'console.log in JS'.
+  (let ((log (method console "log")))
+    (log (concat "lp: "(stgr rx))))) ;; Nicer to strigify the lisp expr first.
+;; tests
+(logr "hello logr") ;; Announces that itself is available.
+(logr logr) ;; Show example of what a Lisp fcn (AKA Lambda) looks like.
+</script>
+
+<!-- ====================================================== reverse ==== -->
+<script type="text/lisp">
+  (logr "Beg reverse =====")
+(defun reverse (rlist)
+  ;;"Return a list with the given elements in reverse order, or nil."
+  (if (consp rlist) ;; Else nil.
+      (let ((retv nil))
+        (while rlist
+          (setq retv (cons (car rlist) retv))
+          (setq rlist (cdr rlist)))
+        retv)))
+  (logr "End reverse =====")
+</script>
+
+<!-- ========================================= lisp draw fn =========== -->
+<script type="text/lisp">
+;; Now Create simple draw fn & have P5 draw call it.
+(logr "Beg html lisp draw fn ==========")
+;; Use "jp-" prefix to avoid stepping on P5 fcns; namespace for the poor.
+;; ================================================== jp-rect ====
+(defun jp-rect (rx ry rwid rhgt) ;; x,y = upper-left corner pos, P5.
+  (js (concat "rect(" rx "," ry "," rwid "," rhgt ")" )))
+
+;; ================================================== jp-circle ====
+(defun jp-circle (rx ry rdia) ;; x,y = center pos, P5.
+  (js (concat "circle(" rx "," ry "," rdia ")" )))
+ 
+
+;; ================================================== jp-cell-rbg-sum ==== 
+(defun jp-pix-rbg-sum ( rx ry ) ;; rcx,rcy is upper-left cell corner pos.
+(let* ((za (logr (list "pix-rbg-sum: rx,ry = " rx ry)))
+         (px (+ 2 rx)) ;; Offset into cell.
+         (py (+ 2 ry))
+         (rbg-sum (js (concat "csjs_get_pixel_color_sum(" px "," py ")"))))
+    (logr (list "rx,ry,px,py,rbg-sum = " rx ry px py rbg-sum)) 
+    rbg-sum))
+
+;; ================================================== jp-draw-bot ====
+(def red-tiles '())
+
+(defun set-black (rloc)
+  (let* ((known (member rloc red-tiles)))
+     (logr (list "known = " known))
+     (if known
+       (let ((pre-list (cdr (member rloc (reverse red-tiles)))))
+         (def red-tiles
+           (append (reverse pre-list) (cdr known)))))))
+
+(defun set-red (rloc)
+  (let* ((known (member rloc red-tiles)))
+     (logr (list "known22 = " known))
+     (if (not known)
+      (def red-tiles (cons rloc red-tiles)))))
+
+;// Global variables, can modify inside a function
+(def mPriorityList (list (list (list 1 0) 0)))
+(def mTempList '())	
+(def mClosedList '())
+(def mCurrentPath (list (list 1 0)))
+(def mRouteTrackToDestination nil)
+
+;// Global variables, can't modify inside a function
+(setq mRootX 1)
+(setq mRootY 0)
+(setq mGoalX 35)
+(setq mGoalY 26)
+(setq mMaxX 35)
+(setq mMaxY 27)
+
+
+(defun jp-get-fn (rloc)
+	(let* ((tGn (length mCurrentPath ))
+			(tHn (+ mGoalX mGoalY (- 0 (car rloc) (cdr rloc))))
+			)
+		(+ tGn tHn)
+	)
+)
+
+;assume max f(n) is 1000
+(defun jp-get-fn-old (rloc)
+	(let* ((tPriorityList mPriorityList)
+			(tFnDefault 1000)
+		)
+		; find cell rloc in priority list
+		(while (and (> (length tPriorityList) 0) (or (/= (caaar mPriorityList) (car rloc)) (/= (cadaar mPriorityList) (cadr rloc))))			
+			(setq tPriorityList (cdr tPriorityList))
+		)		
+		(if (> (length tPriorityList) 0)
+			(setq tFnDefault (cadar tPriorityList))
+		)
+		tFnDefault		
+	)	
+)
+
+(defun jp-add-priority-list (rloc)
+	(let* ((tFnCell (jp-get-fn rloc))
+			(xrloc (car rloc))
+			(yrloc (cadr rloc))
+			)		
+		(def mTempList nil)
+		(logr (list "mPriorityList before loop = " mPriorityList))
+		; // puth the cell into the priority list sorted by ascending order of f(n), y, x
+		(while (and (> (length mPriorityList) 0) (or (< (cadar mPriorityList) tFnCell) (and (= (cadar mPriorityList) tFnCell) (or (> yrloc (cadaar mPriorityList)) (and (= yrloc (cadaar mPriorityList)) (> xrloc (caaar mPriorityList)))))))			
+			(if (= nil mTempList)
+				(def mTempList (list (car mPriorityList)))
+				(def mTempList (append mTempList (list (car mPriorityList))))
+			)
+			(def mPriorityList (cdr mPriorityList))													
+		)		
+		(logr (list "exit while loop at cell = " rloc tFnCell))	
+		(logr (list "mTempList = " mTempList))
+		(logr (list "mPriorityList afte loop and be cut = " mPriorityList))						
+		(def mPriorityList (append mTempList (append (list (list rloc tFnCell)) mPriorityList)))
+		(logr (list "mPriorityList finally = " mPriorityList))
+		
+		; graphic - to display F(n) of neighboring cells
+		(js (concat "print_fn_number (" xrloc ", " yrloc " , " tFnCell ")"))
+	)
+)
+
+(defun jp-remove-member-prioritylist (rloc)
+	(let* ((tPriorityList mPriorityList)
+			(tNewList '())
+		)
+		(while (and (> (length tPriorityList) 0) (or (/= (caaar tPriorityList) (car rloc)) (/= (cadaar tPriorityList) (cadr rloc))))
+			(setq tNewList (append tNewList (list (car tPriorityList))))
+			(setq tPriorityList (cdr tPriorityList))
+		)
+		(if (> (length tPriorityList) 0)
+			(setq tNewList (append tNewList (cdr tPriorityList)))			
+		)
+		(def mPriorityList tNewList)
+		(logr (list "mPriorityList after remove " rloc "is:" mPriorityList))	
+	)
+)
+
+(defun jp-is-member-prioritylist (rloc)
+	(let* ((tPriorityList mPriorityList)
+		)
+		(while (and (> (length tPriorityList) 0) (or (/= (caaar tPriorityList) (car rloc)) (/= (cadaar tPriorityList) (cadr rloc))))
+			(setq tPriorityList (cdr tPriorityList))
+		)
+		(if (> (length tPriorityList) 0)
+			t
+			nil
+		)
+	)
+)
+
+; // save mom of a cell to a javascript array cellMom
+; // 0: right cell, 1: up cell, 2: left cell, 3: down cell
+(defun jp-add-mom-to-cell (rloc direction)
+	(let* ((dx (car rloc))
+			(dy (cadr rloc))			
+		)		
+		(js (concat "cellMom[" dx "][" dy "] = " direction))
+	)	
+)
+
+; // get mom of a cell from the javascript array cellMom
+(defun jb-momRloc (rloc)
+	(let* ((dx (car rloc))
+			(dy (cadr rloc))
+			(tMom (js (concat "cellMom[" dx "][" dy "]")))
+		)
+		(logr (list " Enter jb-momRloc" ))
+		(if (= tMom 0)
+			(setq dx (+ dx 1))
+			(if (= tMom 1)
+				(setq dy (- dy 1))
+				(if (= tMom 2)
+					(setq dx (- dx 1))
+					(if (= tMom 3)
+						(setq dy (+ dy 1))
+					)
+				)
+			)
+		)
+		(logr (list "mom of rloc" rloc " = " (list dx dy)))
+		(list dx dy)
+	)
+)
+
+; // create a path from root to cell using recursive
+(defun jb-track-back-from-cell (rloc)
+	(let ()
+		(logr (list " Enter jb-track-back-from-cell" ))
+		(if (and (= (car rloc) mRootX) (= (cadr rloc) mRootY))
+			(list (list mRootX mRootY))
+			(append (jb-track-back-from-cell (jb-momRloc rloc)) (list rloc))
+		)
+	)
+	
+)
+
+; // if cell is not in priority list and closed list, add it to priority list
+(defun jp-set-unvisited-node (rloc direction)
+	(let* ((known (jp-is-member-prioritylist rloc))
+			(isClosed (member rloc mClosedList)))
+		;(logr (list "known = " known))
+		(if (and (not known) (not isClosed))
+			(let ()				
+				(jp-add-priority-list rloc)
+				(jp-add-mom-to-cell rloc direction)	
+			)
+			(if isClosed
+				(logr (list "Node is closed: " rloc))
+				;does not do anything if node is closed			
+				;else (is in open): update fn, mom, and priority list of that cell	
+				; by check if fn(current) < fn(old), removing it from the priority list and adding it again 
+				(if (< (jp-get-fn rloc) (jp-get-fn-old rloc))
+					(let ()
+						(logr (list "Node already in openlist-------jp-set-unvisited-node---: " rloc))
+						(jp-remove-member-prioritylist rloc)
+						(jp-add-priority-list rloc)
+						(jp-add-mom-to-cell rloc direction)	; add mom to cell
+					)
+				)
+			)
+		)
+	)
+)
+
+
+(defun jp-bot-location (dx dy)
+	(let* ((tOldx (js "g_bot.x"))
+		(tOldy (js "g_bot.y"))	
+		)
+
+		; remove bot from old cell,
+		(if (or (/= tOldx 0) (/= tOldy 0))
+			(let ()
+				; graphic - mark the cell that bot visited 
+				(js (concat "mark_visited_cell(" tOldx "," tOldy ")"))
+
+				; graphic - mark the best path that bot's on
+				(js (concat "mark_best_path_cell(" tOldx "," tOldy ")"))	
+			)
+		)
+		
+		;if cell is on the current path, add mark (small circle to cell)
+		;if cell is visited....??
+		
+		;add bot to new cell
+		(logr "Enter jp-bot-location")
+		(logr (list "dx, dy =" dx dy))
+		(js (concat "g_bot.x = " dx))			
+		(js (concat "g_bot.y = " dy)) 
+	)
+)
+
+(defun jp-check-floor (dx dy)
+	(let* ((jpCellStatus (js (concat "cellStatus[" dx "][" dy "]")))			
+			;(ac (logr (list "x y cellStatus  = " dx dy jpCellStatus)))
+			)
+		jpCellStatus
+	)
+)
+
+(defun jp-add-to-unvisited-node(dx dy direction)	
+	(let ()		
+		(logr "Enter jp-add-to-unvisited-node")				
+		(jp-set-unvisited-node (list dx dy) direction)		
+	)
+)
+
+
+; // check nearby cells (up, down, left, right) and add them to priority list
+(defun jp-nearby-cells (dx dy)			
+	(let ()		
+		(logr "Enter jp-nearby-cell")
+		(if (and (<= (+ dx 1) mMaxX) (jp-check-floor (+ dx 1) dy))
+			;(logr (list "Floor cell:" (- dx 1) dy ))
+			(jp-add-to-unvisited-node (+ dx 1) dy 2)
+			;(logr (list "Wall cell:" (- dx 1) dy ))
+		)		
+		(if (and (<= (+ dy 1) mMaxY) (jp-check-floor dx (+ dy 1)))			
+			(jp-add-to-unvisited-node dx (+ dy 1) 1)			
+		)			
+		(if (and (>= (- dx 1) 0) (jp-check-floor (- dx 1) dy))
+			(jp-add-to-unvisited-node (- dx 1) dy 0)
+		)		
+		(if (and (>= (- dy 1) 0) (jp-check-floor dx (- dy 1)))			
+			(jp-add-to-unvisited-node dx (- dy 1) 3)			
+		)				
+		(logr (list "mPriorityList =" mPriorityList))		
+	)
+0)
+
+
+; // create the path from 2 list, remove the 1st-element (current cell)
+(defun jp-create-path-current-dest(talist tblist)
+	(let* ((startA (car talist))
+			(startB (car tblist))
+			(tFinalList (list startA))			
+		)
+
+		(logr (list "Enter jp-create-path-current-dest"))
+		(while (and (/= nil talist) (not (member startA tblist)))			
+			(setq talist (cdr talist))
+			(setq startA (car talist))			
+			(setq tFinalList (append tFinalList (list startA)))
+		)
+		(while (and (/= nil tblist) (not (member startB tFinalList)))
+			(setq tblist (cdr tblist))
+			(setq startB (car tblist))
+		)
+		(while (/= nil tblist)
+			(setq tblist (cdr tblist))
+			(setq startB (car tblist))
+			(if (/= nil startB)
+				(setq tFinalList (append tFinalList (list startB)))
+			)
+		)
+		(logr (list "tFinalList =" tFinalList))
+		(cdr tFinalList)
+	)
+)
+
+;; ====================================== jp-move-bot ===============
+
+(defun jp-move-bot ()
+  (let* ((aaa (logr "Enter jp-move-bot"))
+		(bx (js "g_bot.x"))
+		(by (js "g_bot.y"))				
+  )  
+  (logr (list "bx, by =" bx by))
+  (if (and (= 0 bx) (= 0 by))					
+		(let()			
+			(jp-bot-location 1 0)
+			(jp-draw-bot)
+		)
+	
+	(if (and (= mGoalX bx) (= mGoalY by))	
+		(let()			
+			(jp-bot-location bx by)
+			(jp-draw-bot)
+			(logr (list "Bot get to destination by path:------------" mCurrentPath)); 
+			(logr (list "Count of cells from root to goal:------------" (length mCurrentPath)));
+			(logr (list "Count of cells bot visited:------------" (+ (length mClosedList) 1)));
+			(logr (list "Count of cells bot discovered:------------" (+ (length mPriorityList) (length mClosedList))))
+		)		
+		(if (= nil mRouteTrackToDestination)
+			(let()				
+			
+				; // remove 1st cell (this cell) from priority list
+				(def mPriorityList (cdr mPriorityList))			
+				(def mClosedList (cons (list bx by) mClosedList))
+				
+				(jp-nearby-cells bx by)		; // add nearby-cells to priority list																	
+				(if (> (length mPriorityList) 0)
+
+
+				
+					(let (  (destX (caaar mPriorityList))
+							(destY (cadaar mPriorityList))
+						) 
+						
+						; // create path from Root to Destination: track back from destination
+						(setq tRootToDestination (jb-track-back-from-cell (list destX destY)))
+						(logr (list "Current Position = " (list bx by)))
+						(logr (list "tRootToDestination" (list destX destY) "=" tRootToDestination))
+						
+						; // create path from Current Cell to Root (reverse CurrentPath)						
+						(setq tCurrentToRoot (reverse mCurrentPath))
+						(logr (list "tCurrentToRoot = " tCurrentToRoot))
+						
+						; // create path from Current Cell to Destination and save to mRouteTrackToDestination					
+						(setq tRouteTrackToDestination (jp-create-path-current-dest tCurrentToRoot tRootToDestination))
+						(logr (list "tRouteTrackToDestination = " tRouteTrackToDestination))
+						(def mRouteTrackToDestination tRouteTrackToDestination)
+					
+						(jp-mark-destination (list destX destY))													
+					)
+				)				
+			)
+
+			; // move bot to destination, remove gradually mRouteTrackToDestination, add to current path
+			(let* ((tBot (car mRouteTrackToDestination))
+				)	
+				(logr (list "move bot to:  " (car tBot) (cadr tBot)))
+				(jp-bot-location (car tBot) (cadr tBot)) 
+				(jp-draw-bot)
+
+				(logr (list "draw bot " ))
+				(def mRouteTrackToDestination (cdr mRouteTrackToDestination))
+				(if (not (member tBot mCurrentPath))
+					; // add cell to current path
+					(let ()
+						(def mCurrentPath (append mCurrentPath (list tBot)))										
+					)
+					; // remove the last element of the current path by reverse it, remove 1st, reverse again
+					(let* ((tCurrentPath (reverse mCurrentPath))						
+						)
+						; // graphic - make cell removed from current path (last element)
+						(js (concat "mark_visited_cell(" (caar tCurrentPath) "," (cadar tCurrentPath) ")"))
+						
+						(setq tCurrentPath (cdr tCurrentPath))																		
+						(def mCurrentPath (reverse tCurrentPath))						
+					)					
+				)
+									(logr (list "mRouteTrackToDestination = " mRouteTrackToDestination))
+					(logr (list "mCurrentPath = " mCurrentPath))
+				)					
+			)			
+		)
+	)  
+))
+
+; mark the next cell that bot will visit 
+(defun jp-mark-destination(rloc)
+	(let* ((sz (js "g_grid.cell_size"))
+			(zin (- sz 20))
+			(coorX (car rloc))
+			(coorY (cadr rloc))
+			(xx (+ 1 (* sz coorX)))
+			(yy (+ 1 (* sz coorY)))
+			)		
+		(js (concat "draw_mark_dest("
+                      xx "," yy "," zin "," zin ")"
+                      ))		
+	)	
+)
+
+(defun jp-draw-bot ( )
+  (let* ((aaa (logr "Enter jp-draw-bot"))
+         (sz (js "g_grid.cell_size"))
+         (zin (- sz 2))
+         (botx (js "g_bot.x"))
+         (boty (js "g_bot.y"))
+         (xx (+ 1 (* sz botx)))
+         (yy (+ 1 (* sz boty)))
+         ;;(pix (jp-pix-rbg-sum xx yy));; don't use it
+         (sctrl (js "g_sctrl")))
+	;;(logr (stgr (list "draw sctrl,pix x,y =" sctrl pix xx yy )))
+	(js (concat "mark_visited_cell(" botx "," boty ")"))
+	(js (concat "mark_best_path_cell(" botx "," boty ")"))	
+    (js (concat "draw_circle("
+                      (+ xx (/ zin 2)) "," (+ yy (/ zin 2)) "," (- zin 20) ")"
+					  ))					  
+	))
+
+;; ================================================== jp-get-tile-color ====
+(defun jp-get-tile-color (rx ry)
+  (let* ((sz (js "g_grid.cell_size"))
+         (px (+ 2 (* sz rx)))
+         (py (+ 2 (* sz ry))))
+    (logr (list "get-tile-color rx,ry =" rx ry))
+    (logr (list "sz,px,py =" sz px py))
+    (jp-pix-rbg-sum px py)))
+
+;; ================================================== jp-list-tile-cells ====
+;; List all tile-cells.
+(defun jp-list-tile-cells ()
+  (logr "Enter jp-list-tile-cells")
+)
+
+
+
+;; ================================================== Setup l4j.draw_fn ====
+;; Build & Setup l4j.draw_fn(): a JP lisp fn callable from JS.
+;; NB, a JS global var isn't same as a JP global var.
+;;  so we/JP must get hands on the JS var via a js() call.
+;;  and we 
+(let* ((l4j (js "g_l4job"))
+       (fnx (lambda ( ) ;; Here's the JP lisp fn being built.
+			  (jp-move-bot)))
+       (fny (lambda ( )
+              (jp-list-tile-cells)))
+       (fnz (lambda ( )
+              (jp-zzdefg))))
+  (set l4j "draw_fn" (export fnx)) ;; Here, we install the JP fn on a JS obj.
+  (logr (list "g_l4job.draw_fn is set"))
+  (logr (list "g_l4job.draw_fn() = " (js "g_l4job.draw_fn")))
+  (set l4j "list_fn" (export fny))
+  (logr (list "g_l4job.list_fn is set"))
+  (set l4j "zzdefg_fn" (export fnz))
+  (logr (list "g_l4job.zzdefg_fn is set"))
+)
+
+;; ==================================================
+;; =================== New Maze Drawing Code ========
+;; ==================================================
+
+;; ================================================== jp-draw-maze-row-run ====
+(defun jp-draw-maze-row-run ( rx-start ry rrow-run )
+  ;; "At row ry, column rx, draw the row given the row-run list."
+  (let* ((row-code (car rrow-run))
+         (row-sprite-id (if (eq 'wall row-code) 0 1)) ;; Select cell sprite. 'wall': 0, 'floor':1
+         (runs (cdr rrow-run))
+         (run-cnt nil)
+         (cell-x rx-start))
+    (logr (list "jp-draw-maze-row-run " rx-start ry rrow-run))
+    (while runs
+      (logr (list "drr runs " runs " row-sprite-id " row-sprite-id))
+      (setq run-cnt (car runs))
+      (setq runs (cdr runs)) ;; Adv.
+      (while ( != 0 run-cnt )
+        (logr (list "drr run-cnt " run-cnt))
+        (if (= 1 row-sprite-id) ;; Ugly, draws only #1 cell type.
+          (let ()
+		  (js (concat "draw_sprite_in_cell("
+                      row-sprite-id "," cell-x "," ry ")"
+                      ))
+			(js (concat "cellStatus[" cell-x "][" ry "] = 1"))		
+					))
+        (setq run-cnt (- run-cnt 1)) ;; Adv.
+        (setq cell-x (+ 1 cell-x))) ;; Set for next cell.
+      (setq row-sprite-id (- 1 row-sprite-id)) ;; Toggle for next number of row.
+      )))
+        
+;; ================================================== jp-draw-maze ====
+(defun jp-draw-maze ( rrow-runs )
+    ;; "Draw the maze cells given the row-runs structure."
+  (let* ((rx-start 0) ;; Never changes.  Always start at left.
+         (ry-start 0) ;; Row #.
+         (row-run nil))
+    (while rrow-runs
+      (setq row-run (car rrow-runs))
+      (setq rrow-runs (cdr rrow-runs)) ;; Adv.
+      (logr (list "jp-draw-maze ry " ry-start ))
+      (jp-draw-maze-row-run rx-start ry-start row-run)
+      (setq ry-start (+ 1 ry-start)) ;; Set for next row.
+      )))
+    
+;; ================================================== maze1-row-runs ====
+;; Maze row-runs structure.
+;;   Each row = (starting-cell-type . run-counts)
+;;   Run-counts = 1st-cell-type-count, 2nd-cell-type-cnt, 1st-cell-type-cnt, etc.
+(def maze1-row-runs ;; Maze for BestFS project #1.
+'(
+ (wall 1 3 5 10 6 7)
+ (wall 1 1 1 3 3 1 1 1 6 5 2 1 1 1 3 3)
+ (floor 4 1 1 2 4 10 6 5 1)
+ (floor 1 4 1 2 1 24 1)
+ (floor 4 1 2 1 4 1 3 1 3 2 5 2 5)
+ (wall 1 1 1 1 2 1 2 1 1 3 1 3 1 1 1 2 3 1 2 1 1 1)
+ (wall 1 3 2 2 1 3 1 1 3 5 4 1 2 6)
+ (wall 1 1 5 1 5 1 12 4 4 1)
+ (wall 1 1 1 3 1 7 2 7 11 1)
+ (floor 2 1 1 1 3 1 1 1 1 4 1 1 1 1 1 1 1 11 2)
+ (floor 1 2 3 3 10 1 3 4 4 4 1)
+ (floor 1 2 1 7 1 2 1 6 1 5 1 2 1 3 2)
+ (floor 4 1 7 1 3 1 3 1 1 3 3 1 3 2 1)
+ (floor 2 3 1 1 1 5 1 1 1 1 1 1 3 3 1 3 1 1 5)
+ (wall 1 1 2 4 5 3 1 3 5 1 3 3 3 1)
+ (wall 1 1 2 1 4 3 2 1 3 1 6 1 4 1 4 1)
+ (wall 1 2 1 1 2 3 1 1 2 5 3 6 2 1 2 3) ;;
+ (wall 2 1 1 2 1 1 1 3 10 1 2 1 1 1 2 1 2 1 1 1)
+ (wall 2 1 2 1 1 1 2 1 4 3 4 1 2 3 2 6)
+ (wall 2 1 2 3 2 1 4 1 1 1 1 4 2 1 1 1 2 1 3 1)
+ (wall 1 3 1 1 2 4 1 3 1 1 1 1 5 1 1 1 1 3 1 3)
+ (wall 1 1 1 3 2 1 2 3 1 1 1 6 2 1 1 1 1 1 1 1 1 1 1 1)
+ (wall 1 3 4 2 3 3 4 1 1 1 1 2 1 1 1 3 1 3)
+ (wall 1 1 7 1 4 1 5 3 1 1 2 1 1 1 1 1)
+ (wall 1 2 2 3 1 4 1 1 2 3 4 2 1 3 1 1 1 3)
+ (wall 2 1 2 1 1 4 1 1 1 1 2 1 1 4 2 1 5 1 1 1 1 1)
+ (wall 2 2 1 3 2 3 1 6 2 4 5 5)
+ (wall 3 3)))
+
+;; tests
+;;(jp-draw-maze-row-run 0 0 '(wall 1 3 5 10 6 7))
+
+;; ================================================== Call jp-draw-maze ====
+(jp-draw-maze maze1-row-runs) ;; Draw the maze on the grid.
+
+(logr "End html lisp draw fn ==========")
+
+</script>
+
+
+</html>
