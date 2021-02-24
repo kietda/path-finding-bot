@@ -1,6 +1,9 @@
 > A* Project
 ![best_path](path-finding-bot.png)
 
+# Demo
+[Link](http://dangproject.com/demo/path-finding-bot/)
+
 # Intro:
   1. This bot uses A* algorithm to estimate cost of near-by tiles and move to the best-cost tile.
   2. Algorithm for bot moving:
