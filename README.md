@@ -1,4 +1,5 @@
-A* Project
+> A* Project
+![best_path](path-finding-bot.png)
 
 # Intro:
   1. This bot uses A* algorithm to estimate cost of near-by tiles and move to the best-cost tile.
@@ -48,6 +49,6 @@ A* Project
   - Highlight the cell visited (beige)
   - Show a 2-digit f(n) number in each of the as-yet-unvisited kid cells that has been evaluated (in open list)
   - Once bot reaches the goal tile (cell (35 26)), it will stop.
-Bugs:
+# Bugs:
   - Decrease the value of g_frame_mod (in cs-sketch-paint.js file) lower (e.g., 2) to make the bot run faster. However, it may make the canvas stop working when user refreshes the browser. 
     + User can fix by closing browser, re-opening browser, and refreshing browser several times can make it run.
